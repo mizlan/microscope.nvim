@@ -1,5 +1,17 @@
 prompt_bufnr = vim.api.nvim_create_buf(true, true)
+-- :sign place 1 line=1 name=microscope_prompt buffer=1
 candidates_bufnr = vim.api.nvim_create_buf(true, true)
+
+-- signcolumn shenanigans
+vim.fn.sign_define('microscope_prompt', {
+  text   = "» ",
+  texthl = "Question",
+  linehl = 'StatusLine'
+})
+
+vim.fn.sign_place(1, '', 'microscope_prompt', prompt_bufnr, {
+  lnum = 1
+})
 
 promptline = vim.fn.floor(vim.api.nvim_get_option('lines') * 2 / 3)
 KILL_FLAG = 0
