@@ -31,6 +31,16 @@ function lines_from(file)
   return lines
 end
 
+function get_keys(tbl)
+  local keys = {}
+  for k, _ in pairs(tbl) do
+    keys[#keys + 1] = k
+  end
+  return keys
+end
+
+cmds = get_keys(vim.api.nvim_get_commands({}))
+
 results = lines_from('words')
 
 --- fuzzy search (an alternative to prefix/substring search)
@@ -59,37 +69,57 @@ function get_valid(query, candidates)
   for _, candidate in ipairs(candidates) do
     if fuzzy(query, candidate) then
     -- if vim.startswith(candidate, query) then
-      table.insert(matches, candidate)
+      matches[#matches+1] = candidate
     end
   end
   get_valid_cache[query] = matches
   return matches
 end
 
-vim.api.nvim_open_win(candidates_bufnr, true, {
-  relative = 'editor',
-  row      = promptline+1,
-  col      = 2,
-  width    = vim.api.nvim_get_option('columns') - 4,
-  height   = vim.api.nvim_get_option('lines') - promptline - 2
-})
-vim.api.nvim_open_win(prompt_bufnr, true, {
-  relative = 'editor',
-  row      = promptline,
-  col      = 2,
-  width    = vim.api.nvim_get_option('columns') - 4,
-  height   = 1
-})
+function show_windows()
+  candidates_winnr = vim.api.nvim_open_win(candidates_bufnr, true, {
+    relative = 'editor',
+    row      = promptline + 1,
+    col      = 2,
+    width    = vim.api.nvim_get_option('columns') - 4,
+    height   = vim.api.nvim_get_option('lines') - promptline - 2,
+    style    = 'minimal'
+  })
+  prompt_winnr = vim.api.nvim_open_win(prompt_bufnr, true, {
+    relative = 'editor',
+    row      = promptline,
+    col      = 2,
+    width    = vim.api.nvim_get_option('columns') - 4,
+    height   = 1,
+    style    = 'minimal'
+  })
+  vim.api.nvim_win_set_option(prompt_winnr, 'signcolumn', 'yes')
+  vim.api.nvim_win_set_option(candidates_winnr, 'signcolumn', 'yes')
+  vim.cmd('startinsert!')
+  return candidates_winnr, prompt_winnr
+end
 
-vim.api.nvim_buf_attach(prompt_bufnr, false, {
-  on_lines = function()
-    if KILL_FLAG > 0 then
-      return false
+function close_windows()
+  vim.api.nvim_win_close(candidates_winnr, true)
+  vim.api.nvim_win_close(prompt_winnr, true)
+end
+
+function attach_updater()
+  return vim.api.nvim_buf_attach(prompt_bufnr, false, {
+    on_lines = function()
+      if KILL_FLAG > 0 then
+        return false
+      end
+      vim.schedule(function()
+        local text = vim.api.nvim_buf_get_lines(prompt_bufnr, 0, -1, true)[1]
+        local allowed = get_valid(text, results)
+        vim.api.nvim_buf_set_lines(candidates_bufnr, 0, -1, true, allowed)
+      end)
     end
-    vim.schedule(function()
-      local text = vim.api.nvim_buf_get_lines(prompt_bufnr, 0, -1, true)[1]
-      local allowed = get_valid(text, results)
-      vim.api.nvim_buf_set_lines(candidates_bufnr, 0, -1, true, allowed)
-    end)
-  end
-})
+  })
+end
+
+vim.api.nvim_set_keymap('n', '<Leader>f', ':lua show_windows()<CR>', {silent = true})
+vim.api.nvim_buf_set_keymap(prompt_bufnr, 'n', '<Esc>', ':lua close_windows()<CR>', {silent = true})
+
+attach_updater()
