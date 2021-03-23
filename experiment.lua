@@ -54,6 +54,8 @@ Microscope_G.update_candidate_selection = function(lnum)
     Microscope_G.candidates_bufnr,
     { lnum = lnum }
   )
+
+  -- center the selection in the candidates window
   vim.fn.win_gotoid(Microscope_G.candidates_winnr)
   vim.fn.execute('normal! '..lnum..'Gzz')
   vim.fn.execute('wincmd p')
