@@ -1,5 +1,7 @@
 Microscope_G = Microscope_G or {}
 
+microscope_util = require('util')
+
 -- DEBUG
 dbg = require('luadev').print
 
@@ -71,42 +73,9 @@ end
 
 Microscope_G.promptline = vim.fn.floor(vim.api.nvim_get_option('lines') * 2 / 3)
 
-function file_exists(file)
-  local f = io.open(file, "rb")
-  if f then f:close() end
-  return f ~= nil
-end
+cmds = microscope_util.get_keys(vim.api.nvim_get_commands({}))
 
-function lines_from(file)
-  if not file_exists(file) then return {} end
-  lines = {}
-  for line in io.lines(file) do 
-    lines[#lines + 1] = line
-  end
-  return lines
-end
-
-function first_(x)
-  return function(tbl)
-    local output = {}
-    for i = 1, x do
-      output[i] = tbl[i]
-    end
-    return output
-  end
-end
-
-function get_keys(tbl)
-  local keys = {}
-  for k, _ in pairs(tbl) do
-    keys[#keys + 1] = k
-  end
-  return keys
-end
-
-cmds = get_keys(vim.api.nvim_get_commands({}))
-
-results = lines_from('words')
+results = microscope_util.lines_from('words')
 
 --- fuzzy search (an alternative to prefix/substring search)
 Microscope_G.fuzzy = function(query, s)
@@ -153,7 +122,7 @@ Microscope_G.show_windows = function()
     relative = 'editor',
     row      = Microscope_G.promptline + 1,
     col      = 2,
-    width    = vim.api.nvim_get_option('columns') - 120,
+    width    = vim.api.nvim_get_option('columns') - 4,
     height   = vim.api.nvim_get_option('lines') - Microscope_G.promptline - 2,
     style    = 'minimal'
   })
@@ -161,7 +130,7 @@ Microscope_G.show_windows = function()
     relative = 'editor',
     row      = Microscope_G.promptline,
     col      = 2,
-    width    = vim.api.nvim_get_option('columns') - 120,
+    width    = vim.api.nvim_get_option('columns') - 4,
     height   = 1,
     style    = 'minimal'
   })
@@ -224,12 +193,3 @@ vim.api.nvim_buf_set_keymap(Microscope_G.prompt_bufnr, 'i', '<C-n>', '<Esc>:lua 
 vim.api.nvim_buf_set_keymap(Microscope_G.prompt_bufnr, 'i', '<C-p>', '<Esc>:lua Microscope_G.attempt_decrement_selection()<CR>a', {noremap = true, silent = true})
 
 Microscope_G.attach_updater()
-print(vim.inspect(Microscope_G.get_valid_cache["breadb"]))
-print(Microscope_G.candidate_selection_lnum)
-print(Microscope_G.is_valid_selection(Microscope_G.candidate_selection_lnum))
-print(vim.api.nvim_buf_get_lines(
-  Microscope_G.candidates_bufnr,
-  Microscope_G.candidate_selection_lnum - 1,
-  Microscope_G.candidate_selection_lnum,
-  false
-)[1])
